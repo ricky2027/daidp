@@ -1,0 +1,243 @@
+Build a React Native mobile app called AwaazPe — a voice-based UPI payment app for India using Expo.
+Tech Stack:
+
+Expo SDK 54 with Expo Router (file-based routing)
+TypeScript
+Express.js backend server
+Sarvam AI API for speech-to-text and text-to-speech
+
+Environment Variables:
+
+SARVAM_API_KEY — for Sarvam AI APIs
+
+
+ONBOARDING FLOW (before app starts):
+
+Welcome Screen — App logo and name with animated entrance
+Language Selection Screen — User picks their preferred language before entering the app. Options: English, Hindi, Bengali, Tamil, Telugu, Kannada, Marathi, Gujarati. Show each language in its own script (e.g. हिन्दी, বাংলা, தமிழ்). Save selection to AsyncStorage.
+Theme Selection Screen — User picks Light or Dark theme before entering the app. Show preview of both themes. Save to AsyncStorage.
+These selections are remembered on next launch — skip onboarding if already completed.
+
+
+THEME SYSTEM:
+
+Full dark mode and light mode support throughout the entire app
+Toggle theme from Profile screen at any time
+Colorblind-friendly color palette — avoid red/green combinations for status indicators. Use:
+
+Success: Blue (#2196F3) instead of green
+Error/Danger: Orange (#FF6D00) instead of red
+Primary: Indigo (#6366F1)
+Warning: Yellow (#F59E0B)
+All colors must pass WCAG AA contrast ratio for both themes
+Use patterns/icons alongside colors (never color alone) to convey status
+
+
+Dark theme: deep navy/charcoal backgrounds, not pure black
+Light theme: soft white/gray backgrounds, not pure white
+Colorblind mode toggle available in Profile — enables maximum contrast palette
+
+
+SCREENS:
+
+Home/Dashboard
+
+Balance card with show/hide toggle
+Quick contact avatars for fast payment
+Recent transactions list
+Quick action buttons: Pay, History, Schedule, Profile
+"Pay Nearby" button with sonar/radar animation
+
+
+Voice Payment Screen
+
+Hold mic button to record, release to process
+Live waveform animation while recording
+Shows live transcript of what was said
+Parsed result card showing action, amount, recipient
+Supports English and Hindi commands:
+
+"Send 500 to Rahul"
+"Schedule 1000 to Priya tomorrow"
+"Check balance"
+"Rahul ko paanch sau bhejo"
+"Kal Priya ko ek hazaar bhejo"
+
+
+Payment confirmation bottom sheet
+Schedule payment bottom sheet
+
+
+Schedule Payment Screen
+
+List of all upcoming scheduled payments
+Create new scheduled payment with: recipient picker, amount input, date picker, recurring option (daily/weekly/monthly), note
+Edit and cancel scheduled payments
+Show countdown to next scheduled payment
+
+
+Transaction History Screen
+
+List of all past transactions with date, amount, recipient, category
+Filter by date range and transaction type
+Search transactions by name or amount
+
+
+Financial Spending Graph Screen
+
+Monthly spending bar chart (last 6 months)
+Category donut chart (Food, Transport, Shopping, Entertainment, Utilities, Others)
+Weekly spending line graph
+Total sent vs received summary cards
+All charts must use colorblind-friendly colors with text labels not just color
+Use react-native-chart-kit or victory-native for charts
+
+
+QR Code Screen
+
+Display user's own QR code (generated from their UPI ID)
+Scanner to scan another person's QR code
+On successful scan, auto-fill payment form with scanned UPI ID
+Use expo-camera for scanning and react-native-qrcode-svg for generation
+
+
+Nearby Transfer Screen
+
+Animated radar/sonar pulse effect showing nearby users
+Mock list of nearby users appears after 2 second "scanning" animation
+Tap any nearby user to start payment instantly
+Show distance and name of nearby users
+
+
+Split Payment Screen
+
+Select multiple contacts from list
+Enter total amount
+App divides equally and shows each person's share
+Send all split payments at once
+Track who has paid and who hasn't
+
+
+Payment Request Screen
+
+Send payment request to any contact with amount and note
+Incoming requests shown as cards on home screen
+Accept or decline with one tap
+Declined requests show reason
+
+
+Transaction Receipt Screen
+
+Full receipt after every successful payment
+Shows: sender avatar, receiver avatar, amount, date, time, unique transaction ID
+Animated transfer effect (particles/coins flying between two phones)
+"Share Receipt" button — share as image via WhatsApp, messages
+"Download PDF" option using expo-print
+
+
+Profile Screen
+
+User name, UPI ID, profile photo
+Own QR code preview
+Language switcher (changes app language instantly)
+Theme toggle (dark/light)
+Colorblind mode toggle
+Notification preferences
+App version info
+
+
+
+
+PEER-TO-PEER TRANSFER:
+
+Every user has a unique QR code showing their UPI ID
+Scan another phone's QR code to pay them instantly
+Nearby transfer with simulated device discovery
+Contact picker for direct transfers
+Split payments across multiple contacts
+Payment requests (request money from contacts)
+Full animated receipt after every transfer
+Shareable receipt as image or PDF
+
+TRANSFER ANIMATION:
+
+When payment is sent, show full-screen animated transfer — particles/coins flying from left phone to right phone
+Sender avatar on left, receiver avatar on right
+Success pulse animation in blue (colorblind safe)
+Duration: 1.5 seconds then auto-dismiss
+
+
+BACKEND API ROUTES:
+
+POST /api/voice/stt — receives base64 audio, sends to Sarvam saarika:v2 model as multipart form-data with fields: file, language_code, model. Returns { transcript: string }
+POST /api/voice/parse — parses transcript locally using regex and keyword matching. Returns action, amount, recipient, scheduledDate, confidence. No OpenAI, no external AI API whatsoever.
+POST /api/voice/tts — Sarvam text-to-speech using bulbul:v1 model
+POST /api/voice/translate — Sarvam translate using mayura:v1 model
+
+
+VOICE PARSE LOGIC (fully local, no AI API):
+
+Detect action: send, schedule, check_balance, history, unknown
+Extract amount from digits or Hindi/English number words:
+
+ek=1, do=2, teen=3, char=4, paanch=5, chhe=6, saat=7, aath=8, nau=9, das=10
+bees=20, pachas=50, sau=100, hazaar=1000, lakh=100000
+
+
+Match recipient by fuzzy name matching against contacts list
+Extract schedule date: tomorrow, kal, parso, day names (monday–sunday), date numbers (15th ko)
+Confidence score: 0.5 base + 0.2 for send keyword + 0.2 for amount + 0.1 for contact
+
+
+MOCK DATA:
+
+Contacts: Rahul Sharma (rahul@upi), Priya Patel (priya@paytm), Ankit Kumar (ankit@gpay), Sunita Devi (sunita@upi), Vikram Singh (vikram@upi), Meera Joshi (meera@okaxis), Amit Verma (amit@upi), Kavya Nair (kavya@upi)
+Generate 3 months of realistic mock transaction history with categories and amounts
+Generate 3 upcoming mock scheduled payments
+Generate mock spending data per category for graphs
+Generate mock nearby users for nearby transfer feature
+
+
+SUPPORTED LANGUAGES: English, Hindi, Bengali, Tamil, Telugu, Kannada, Marathi, Gujarati
+
+NAVIGATION:
+
+Bottom tab bar with 5 tabs: Home, Pay (voice), History, Graphs, Profile
+Stack navigation for deeper screens (QR, Nearby, Split, Receipt)
+Smooth screen transitions using react-native-reanimated
+
+
+UI & ANIMATIONS:
+
+Professional fintech look inspired by PhonePe and Google Pay
+Smooth animations using react-native-reanimated
+Haptic feedback on all button presses using expo-haptics
+All screens work perfectly in both dark and light theme
+Colorblind mode toggleable at runtime — no app restart needed
+Bottom sheet modals for confirmation and scheduling
+
+
+PACKAGES TO USE:
+
+expo-audio — for voice recording (NOT expo-av)
+expo-file-system — for reading recorded audio as base64
+expo-camera — for QR code scanning
+react-native-qrcode-svg — for QR code generation
+expo-print — for PDF receipt generation
+expo-sharing — for sharing receipts
+react-native-chart-kit — for spending graphs
+react-native-reanimated — for animations
+expo-haptics — for haptic feedback
+form-data — for sending audio to Sarvam API as multipart
+@react-native-async-storage/async-storage — for saving theme and language preferences
+
+
+IMPORTANT RULES:
+
+Do NOT use OpenAI or any other AI API — only Sarvam
+Do NOT use expo-av — use expo-audio instead
+Voice parse must work fully offline with local keyword matching only
+Onboarding screens only show on very first launch
+All status colors must be colorblind accessible (no red/green reliance)
+Server must start without any OpenAI key — remove all OpenAI dependencies
+The /api/voice/parse route must use only local logic, no external API calls

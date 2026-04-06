@@ -1,0 +1,239 @@
+openapi: 3.1.0
+info:
+  title: Api
+  version: 0.1.0
+  description: AwaazPe API specification
+servers:
+  - url: /api
+    description: Base API path
+tags:
+  - name: health
+    description: Health operations
+  - name: voice
+    description: Voice AI operations
+paths:
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      description: Returns server health status
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+  /voice/stt:
+    post:
+      operationId: speechToText
+      tags: [voice]
+      summary: Speech to text
+      description: Converts audio to text using Sarvam AI
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/STTRequest"
+      responses:
+        "200":
+          description: Transcription result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/STTResponse"
+        "500":
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /voice/parse:
+    post:
+      operationId: parseVoiceCommand
+      tags: [voice]
+      summary: Parse voice command
+      description: Parses transcript into structured payment command
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ParseRequest"
+      responses:
+        "200":
+          description: Parsed command result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ParseResponse"
+  /voice/tts:
+    post:
+      operationId: textToSpeech
+      tags: [voice]
+      summary: Text to speech
+      description: Converts text to audio using Sarvam AI
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TTSRequest"
+      responses:
+        "200":
+          description: Audio data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TTSResponse"
+        "500":
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /voice/translate:
+    post:
+      operationId: translateText
+      tags: [voice]
+      summary: Translate text
+      description: Translates text using Sarvam AI
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TranslateRequest"
+      responses:
+        "200":
+          description: Translation result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TranslateResponse"
+        "500":
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+components:
+  schemas:
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+      required:
+        - status
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+        - error
+    STTRequest:
+      type: object
+      properties:
+        audio:
+          type: string
+          description: Base64 encoded audio data
+        languageCode:
+          type: string
+          description: Language code (e.g. hi-IN, en-IN)
+      required:
+        - audio
+        - languageCode
+    STTResponse:
+      type: object
+      properties:
+        transcript:
+          type: string
+      required:
+        - transcript
+    ParseRequest:
+      type: object
+      properties:
+        transcript:
+          type: string
+        contacts:
+          type: array
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+              upiId:
+                type: string
+            required:
+              - name
+              - upiId
+      required:
+        - transcript
+    ParseResponse:
+      type: object
+      properties:
+        action:
+          type: string
+          enum: [send, schedule, check_balance, history, unknown]
+        amount:
+          type: number
+          nullable: true
+        recipient:
+          type: string
+          nullable: true
+        recipientUpiId:
+          type: string
+          nullable: true
+        scheduledDate:
+          type: string
+          nullable: true
+        confidence:
+          type: number
+        rawTranscript:
+          type: string
+      required:
+        - action
+        - confidence
+        - rawTranscript
+    TTSRequest:
+      type: object
+      properties:
+        text:
+          type: string
+        languageCode:
+          type: string
+      required:
+        - text
+        - languageCode
+    TTSResponse:
+      type: object
+      properties:
+        audio:
+          type: string
+          description: Base64 encoded audio
+      required:
+        - audio
+    TranslateRequest:
+      type: object
+      properties:
+        text:
+          type: string
+        sourceLanguage:
+          type: string
+        targetLanguage:
+          type: string
+      required:
+        - text
+        - sourceLanguage
+        - targetLanguage
+    TranslateResponse:
+      type: object
+      properties:
+        translatedText:
+          type: string
+      required:
+        - translatedText
