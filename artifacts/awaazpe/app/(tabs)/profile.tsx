@@ -56,10 +56,10 @@ function SettingRow({
 export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
   const { colors, isDark, setTheme, colorblindMode, setColorblindMode } = useTheme();
-  const { language, setLanguage } = useApp();
+  const { language, setLanguage, currentProfile } = useApp();
   const [showLangPicker, setShowLangPicker] = useState(false);
   const [showQR, setShowQR] = useState(false);
-  const upiId = "aditya.kumar@upi";
+  const upiId = currentProfile.upiId;
 
   const currentLang = LANGUAGES.find((l) => l.code === language)?.label || "English";
 
@@ -75,11 +75,11 @@ export default function ProfileScreen() {
 
         {/* Profile Card */}
         <View style={[styles.profileCard, { backgroundColor: colors.card }]}>
-          <View style={[styles.profileAvatar, { backgroundColor: COLORS.primary }]}>
-            <Text style={[styles.profileInitials, { fontFamily: "Inter_700Bold" }]}>AK</Text>
+          <View style={[styles.profileAvatar, { backgroundColor: currentProfile.color }]}>
+            <Text style={[styles.profileInitials, { fontFamily: "Inter_700Bold" }]}>{currentProfile.initials}</Text>
           </View>
           <View>
-            <Text style={[styles.profileName, { color: colors.text, fontFamily: "Inter_700Bold" }]}>Aditya Kumar</Text>
+            <Text style={[styles.profileName, { color: colors.text, fontFamily: "Inter_700Bold" }]}>{currentProfile.name}</Text>
             <Text style={[styles.profileUpi, { color: colors.textSecondary, fontFamily: "Inter_400Regular" }]}>{upiId}</Text>
           </View>
           <Pressable
@@ -96,7 +96,7 @@ export default function ProfileScreen() {
             <Text style={[styles.qrLabel, { color: colors.textSecondary, fontFamily: "Inter_400Regular" }]}>Your UPI QR Code</Text>
             <View style={styles.qrWrapper}>
               <QRCode
-                value={`upi://pay?pa=${upiId}&pn=Aditya Kumar`}
+                value={`upi://pay?pa=${upiId}&pn=${currentProfile.name}`}
                 size={200}
                 color={colors.text}
                 backgroundColor={colors.card}

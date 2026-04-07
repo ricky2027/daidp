@@ -18,11 +18,11 @@ import { useApp } from "@/context/AppContext";
 export default function QRScreen() {
   const insets = useSafeAreaInsets();
   const { colors, isDark } = useTheme();
-  const { contacts } = useApp();
+  const { contacts, currentProfile } = useApp();
   const [mode, setMode] = useState<"my" | "scan">("my");
   const [permission, requestPermission] = useCameraPermissions();
   const [scanned, setScanned] = useState<string | null>(null);
-  const upiId = "aditya.kumar@upi";
+  const upiId = currentProfile.upiId;
 
   const handleBarCodeScanned = ({ data }: { data: string }) => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -73,11 +73,11 @@ export default function QRScreen() {
       {mode === "my" ? (
         <View style={styles.myQRSection}>
           <View style={[styles.qrCard, { backgroundColor: colors.card }]}>
-            <Text style={[styles.qrName, { color: colors.text, fontFamily: "Inter_700Bold" }]}>Aditya Kumar</Text>
+            <Text style={[styles.qrName, { color: colors.text, fontFamily: "Inter_700Bold" }]}>{currentProfile.name}</Text>
             <Text style={[styles.qrUpi, { color: colors.textSecondary, fontFamily: "Inter_400Regular" }]}>{upiId}</Text>
             <View style={[styles.qrFrame, { backgroundColor: "#fff", borderColor: colors.border }]}>
               <QRCode
-                value={`upi://pay?pa=${upiId}&pn=Aditya Kumar`}
+                value={`upi://pay?pa=${upiId}&pn=${currentProfile.name}`}
                 size={220}
                 color="#0F1117"
                 backgroundColor="#fff"

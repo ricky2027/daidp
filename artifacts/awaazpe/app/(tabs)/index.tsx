@@ -15,7 +15,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { COLORS } from "@/constants/colors";
 import { useTheme } from "@/context/ThemeContext";
-import { useApp, MOCK_CONTACTS } from "@/context/AppContext";
+import { useApp, MOCK_CONTACTS, PROFILES } from "@/context/AppContext";
 
 const BASE_URL =
   process.env.EXPO_PUBLIC_DOMAIN
@@ -163,7 +163,7 @@ function SonarAnimation() {
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const { colors } = useTheme();
-  const { balance, balanceVisible, setBalanceVisible, transactions, paymentRequests, contacts, respondToRequest, addTransaction, language, totalSent, totalReceived, lastExecutedSchedule, clearLastExecutedSchedule } = useApp();
+  const { balance, balanceVisible, setBalanceVisible, transactions, paymentRequests, contacts, respondToRequest, addTransaction, language, totalSent, totalReceived, lastExecutedSchedule, clearLastExecutedSchedule, currentProfile, switchProfile, incomingP2PPayment, clearIncomingP2PPayment } = useApp();
   const [greeting, setGreeting] = useState("Good Morning");
   const [incomingPayment, setIncomingPayment] = useState<{ sender: string; amount: number } | null>(null);
 
@@ -175,6 +175,15 @@ export default function HomeScreen() {
       language
     );
   }, [lastExecutedSchedule]);
+
+  // Play TTS when a real P2P payment arrives
+  useEffect(() => {
+    if (!incomingP2PPayment) return;
+    playTTSNotification(
+      `You received rupees ${incomingP2PPayment.amount} from ${incomingP2PPayment.sender.split(" ")[0]}`,
+      language
+    );
+  }, [incomingP2PPayment]);
 
   useEffect(() => {
     const h = new Date().getHours();
@@ -218,12 +227,21 @@ export default function HomeScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      {/* Incoming payment toast */}
+      {/* Simulated incoming payment toast */}
       {incomingPayment && (
         <IncomingPaymentToast
           sender={incomingPayment.sender}
           amount={incomingPayment.amount}
           onDismiss={() => setIncomingPayment(null)}
+        />
+      )}
+
+      {/* Real P2P incoming payment toast (from another tab/profile) */}
+      {incomingP2PPayment && !incomingPayment && (
+        <IncomingPaymentToast
+          sender={incomingP2PPayment.sender}
+          amount={incomingP2PPayment.amount}
+          onDismiss={clearIncomingP2PPayment}
         />
       )}
 
@@ -242,9 +260,24 @@ export default function HomeScreen() {
       >
         {/* Header */}
         <View style={styles.header}>
-          <View>
+          <View style={{ flex: 1 }}>
             <Text style={[styles.greeting, { color: colors.textSecondary, fontFamily: "Inter_400Regular" }]}>{greeting}</Text>
-            <Text style={[styles.userName, { color: colors.text, fontFamily: "Inter_700Bold" }]}>Aditya Kumar</Text>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+              <Text style={[styles.userName, { color: colors.text, fontFamily: "Inter_700Bold" }]}>{currentProfile.name}</Text>
+              {/* Profile switcher — shows the other profile to switch to */}
+              {PROFILES.filter((p) => p.id !== currentProfile.id).map((p) => (
+                <Pressable
+                  key={p.id}
+                  onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); switchProfile(p.id); }}
+                  style={[styles.profileSwitchBtn, { backgroundColor: p.color + "20", borderColor: p.color + "50" }]}
+                >
+                  <View style={[styles.profileSwitchAvatar, { backgroundColor: p.color }]}>
+                    <Text style={{ color: "#fff", fontFamily: "Inter_700Bold", fontSize: 9 }}>{p.initials}</Text>
+                  </View>
+                  <Text style={{ color: p.color, fontFamily: "Inter_600SemiBold", fontSize: 11 }}>Switch</Text>
+                </Pressable>
+              ))}
+            </View>
           </View>
           <Pressable
             onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push("/qr"); }}
@@ -276,7 +309,7 @@ export default function HomeScreen() {
               <Text style={[styles.balanceStatText, { fontFamily: "Inter_400Regular" }]}>₹{totalReceived.toLocaleString("en-IN")} Received</Text>
             </View>
           </View>
-          <Text style={[styles.upiId, { fontFamily: "Inter_400Regular" }]}>aditya.kumar@upi</Text>
+          <Text style={[styles.upiId, { fontFamily: "Inter_400Regular" }]}>{currentProfile.upiId}</Text>
         </View>
 
         {/* Payment Requests */}
@@ -450,6 +483,8 @@ const styles = StyleSheet.create({
   header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 20, marginBottom: 16 },
   greeting: { fontSize: 13 },
   userName: { fontSize: 22, letterSpacing: -0.5 },
+  profileSwitchBtn: { flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 20, borderWidth: 1 },
+  profileSwitchAvatar: { width: 16, height: 16, borderRadius: 8, alignItems: "center", justifyContent: "center" },
   qrBtn: { width: 42, height: 42, borderRadius: 12, alignItems: "center", justifyContent: "center" },
   balanceCard: { marginHorizontal: 20, borderRadius: 20, padding: 20, marginBottom: 20 },
   balanceHeader: { flexDirection: "row", justifyContent: "space-between", marginBottom: 8 },

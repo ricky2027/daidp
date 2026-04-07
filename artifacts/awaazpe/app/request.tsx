@@ -18,7 +18,7 @@ import { useApp } from "@/context/AppContext";
 export default function RequestScreen() {
   const insets = useSafeAreaInsets();
   const { colors } = useTheme();
-  const { contacts } = useApp();
+  const { contacts, sendPaymentRequest } = useApp();
   const [selectedContact, setSelectedContact] = useState<string | null>(null);
   const [amount, setAmount] = useState("");
   const [note, setNote] = useState("");
@@ -27,6 +27,7 @@ export default function RequestScreen() {
   const handleSend = () => {
     if (!selectedContact || !amount) return;
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    sendPaymentRequest(selectedContact, Number(amount), note || undefined);
     setSent(true);
   };
 
