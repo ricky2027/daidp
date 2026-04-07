@@ -33,6 +33,7 @@ export type ScheduledPayment = {
   time?: string;
   recurring?: "daily" | "weekly" | "monthly" | null;
   note?: string;
+  category?: string;
 };
 
 export type PaymentRequest = {
@@ -187,11 +188,20 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const scheduledRef = useRef<ScheduledPayment[]>([]);
 
   useEffect(() => {
-    AsyncStorage.multiGet(["@language", "@onboarding"]).then((vals) => {
+    AsyncStorage.multiGet(["@language", "@onboarding", "@scheduledPayments"]).then((vals) => {
       const lang = vals[0][1];
       const ob = vals[1][1];
+      const sp = vals[2][1];
       if (lang) setLanguageState(lang);
       if (ob === "true") setOnboardingDone(true);
+      if (sp) {
+        try {
+          const parsed: ScheduledPayment[] = JSON.parse(sp);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setScheduledPayments(parsed);
+          }
+        } catch {}
+      }
     });
   }, []);
 
@@ -200,11 +210,17 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     scheduledRef.current = scheduledPayments;
   }, [scheduledPayments]);
 
+  // Persist scheduled payments across app restarts
+  useEffect(() => {
+    AsyncStorage.setItem("@scheduledPayments", JSON.stringify(scheduledPayments));
+  }, [scheduledPayments]);
+
   // Scheduled payment executor — checks every 60s and immediately on mount
   useEffect(() => {
     const tick = () => {
       const now = new Date();
-      const todayStr = now.toISOString().split("T")[0];
+      // Use local date (not UTC) to match how scheduled dates are stored
+      const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
       const hh = String(now.getHours()).padStart(2, "0");
       const mm = String(now.getMinutes()).padStart(2, "0");
       const currentTime = `${hh}:${mm}`;
@@ -224,7 +240,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             contactName: s.contactName,
             date: new Date().toISOString(),
             note: s.note || "Scheduled payment",
-            category: "Others",
+            category: s.category ?? "Others",
             status: "completed" as const,
             transactionId: `TXN${Date.now()}`,
           },
@@ -244,7 +260,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           const nextEntry: ScheduledPayment = {
             ...s,
             id: `sch_rec_${Date.now()}`,
-            date: next.toISOString().split("T")[0],
+            date: `${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, "0")}-${String(next.getDate()).padStart(2, "0")}`,
           };
           setScheduledPayments((prev) => [nextEntry, ...prev]);
         }

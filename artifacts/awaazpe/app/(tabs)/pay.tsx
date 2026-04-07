@@ -48,6 +48,7 @@ type ParsedCommand = {
   recipient: string | null;
   recipientUpiId: string | null;
   scheduledDate: string | null;
+  scheduledTime?: string | null;
   mandateConfig?: {
     frequency: "daily" | "weekly" | "monthly" | "yearly" | "as_presented";
     startDate: string;
@@ -854,7 +855,7 @@ export default function PayScreen() {
 
       if (data.amount) setAmount(String(data.amount));
       if (data.scheduledDate) setScheduleDate(data.scheduledDate);
-      if ((data as any).scheduledTime) setScheduleTime((data as any).scheduledTime);
+      if (data.scheduledTime) setScheduleTime(data.scheduledTime);
       if (data.recipient) {
         const found = contacts.find(
           (c) =>
@@ -914,10 +915,10 @@ export default function PayScreen() {
     const action = payData?.action ?? (scheduleMode ? "schedule" : "send");
     const isSchedule = action === "schedule";
     const isMandate = action === "mandate";
-    const finalDate =
-      scheduleDate ||
-      payData?.scheduledDate ||
-      new Date(Date.now() + 86400000).toISOString().split("T")[0];
+    const _tomorrow = new Date();
+    _tomorrow.setDate(_tomorrow.getDate() + 1);
+    const _tomorrowStr = `${_tomorrow.getFullYear()}-${String(_tomorrow.getMonth() + 1).padStart(2, "0")}-${String(_tomorrow.getDate()).padStart(2, "0")}`;
+    const finalDate = scheduleDate || payData?.scheduledDate || _tomorrowStr;
     const recipientFirst = contact.name.split(" ")[0];
 
     let confirmText = "";
@@ -956,6 +957,7 @@ export default function PayScreen() {
         date: finalDate,
         time: parsedTime || undefined,
         note,
+        category: detectCategory(payData?.rawTranscript ?? "", note),
       });
       router.push({
         pathname: "/receipt",

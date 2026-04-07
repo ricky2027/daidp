@@ -95,19 +95,45 @@ export default function GraphsScreen() {
     propsForBackgroundLines: { strokeWidth: 0.5, stroke: colors.border },
   };
 
-  const monthlyData = {
-    labels: ["Oct", "Nov", "Dec", "Jan", "Feb", "Mar"],
-    datasets: [{ data: [8200, 11400, 9800, 13200, 7600, 10500] }],
-  };
+  const monthlyData = React.useMemo(() => {
+    const now = new Date();
+    const labels: string[] = [];
+    const amounts: number[] = [];
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      labels.push(d.toLocaleString("en-IN", { month: "short" }));
+      const start = new Date(d.getFullYear(), d.getMonth(), 1).getTime();
+      const end = new Date(d.getFullYear(), d.getMonth() + 1, 0, 23, 59, 59, 999).getTime();
+      amounts.push(
+        transactions
+          .filter((t) => t.type === "sent" && new Date(t.date).getTime() >= start && new Date(t.date).getTime() <= end)
+          .reduce((s, t) => s + t.amount, 0)
+      );
+    }
+    return { labels, datasets: [{ data: amounts }] };
+  }, [transactions]);
 
-  const weeklyData = {
-    labels: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
-    datasets: [{
-      data: [1200, 800, 2100, 600, 3400, 1800, 900],
-      color: (opacity = 1) => `rgba(99, 102, 241, ${opacity})`,
-      strokeWidth: 2,
-    }],
-  };
+  const weeklyData = React.useMemo(() => {
+    const now = new Date();
+    const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+    const labels: string[] = [];
+    const amounts: number[] = [];
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i);
+      labels.push(dayNames[d.getDay()]);
+      const start = d.getTime();
+      const end = new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1).getTime();
+      amounts.push(
+        transactions
+          .filter((t) => t.type === "sent" && new Date(t.date).getTime() >= start && new Date(t.date).getTime() < end)
+          .reduce((s, t) => s + t.amount, 0)
+      );
+    }
+    return {
+      labels,
+      datasets: [{ data: amounts, color: (opacity = 1) => `rgba(99, 102, 241, ${opacity})`, strokeWidth: 2 }],
+    };
+  }, [transactions]);
 
   const totalSent = transactions.filter((t) => t.type === "sent").reduce((sum, t) => sum + t.amount, 0);
   const totalReceived = transactions.filter((t) => t.type === "received").reduce((sum, t) => sum + t.amount, 0);
