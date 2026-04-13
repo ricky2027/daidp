@@ -853,7 +853,7 @@ export default function PayScreen() {
         return;
       }
 
-      if (data.amount) setAmount(String(data.amount));
+      setAmount(data.amount != null ? String(data.amount) : "");
       if (data.scheduledDate) setScheduleDate(data.scheduledDate);
       if (data.scheduledTime) setScheduleTime(data.scheduledTime);
       if (data.recipient) {

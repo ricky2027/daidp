@@ -265,6 +265,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const currentProfileIdRef = useRef(currentProfileId);
   // Start as true so save effects don't fire before the first async load completes
   const isSwitchingRef = useRef(true);
+  // Mutable ref so the scheduler's closed-over tick() always calls the latest addTransaction
+  const addTransactionRef = useRef<(t: Transaction) => void>(() => {});
 
   useEffect(() => { currentProfileIdRef.current = currentProfileId; }, [currentProfileId]);
   useEffect(() => { scheduledRef.current = scheduledPayments; }, [scheduledPayments]);
@@ -384,9 +386,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     return () => { es.close(); };
   }, [currentProfileId]); // Re-subscribe when profile switches
 
-  // ── Scheduled payment executor (every 60s + on mount) ────────────────────────
+  // ── Scheduled payment executor (every 1s + on mount) ────────────────────────
+  // executingIds prevents the same payment from firing twice if ticks overlap
+  const executingIds = useRef(new Set<string>()).current;
+
   useEffect(() => {
     const tick = () => {
+      // Don't execute during a profile switch — state is mid-load
+      if (isSwitchingRef.current) return;
+
       const now = new Date();
       const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
       const hh = String(now.getHours()).padStart(2, "0");
@@ -398,23 +406,29 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         const todayDue = s.date === todayStr && (!s.time || s.time <= currentTime);
         if (!pastDate && !todayDue) return;
 
-        setTransactions((prev) => [
-          {
-            id: `txn_sch_${s.id}_${Date.now()}`,
-            type: "sent" as const,
-            amount: s.amount,
-            contactId: s.contactId,
-            contactName: s.contactName,
-            date: new Date().toISOString(),
-            note: s.note || "Scheduled payment",
-            category: s.category ?? "Others",
-            status: "completed" as const,
-            transactionId: `TXN${Date.now()}`,
-          },
-          ...prev,
-        ]);
-        setBalanceAdjustment((prev) => prev - s.amount);
-        setScheduledPayments((prev) => prev.filter((p) => p.id !== s.id));
+        // Dedup guard — skip if already being processed
+        if (executingIds.has(s.id)) return;
+        executingIds.add(s.id);
+
+        // Route through addTransaction so SSE broadcast fires for the receiver
+        addTransactionRef.current({
+          id: `txn_sch_${s.id}_${Date.now()}`,
+          type: "sent",
+          amount: s.amount,
+          contactId: s.contactId,
+          contactName: s.contactName,
+          date: new Date().toISOString(),
+          note: s.note || "Scheduled payment",
+          category: s.category ?? "Others",
+          status: "completed",
+          transactionId: `TXN${Date.now()}`,
+        });
+
+        // Remove from scheduled list (also clears the dedup guard entry)
+        setScheduledPayments((prev) => {
+          executingIds.delete(s.id);
+          return prev.filter((p) => p.id !== s.id);
+        });
 
         if (s.recurring) {
           const next = new Date(s.date);
@@ -434,7 +448,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     };
 
     tick();
-    const interval = setInterval(tick, 60000);
+    const interval = setInterval(tick, 1000);
     return () => clearInterval(interval);
   }, []);
 
@@ -504,6 +518,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       }
     }
   }, []);
+
+  // Keep ref in sync on every render so tick() always calls the latest version
+  addTransactionRef.current = addTransaction;
 
   const addScheduledPayment = useCallback((s: ScheduledPayment) => {
     setScheduledPayments((prev) => [s, ...prev]);
